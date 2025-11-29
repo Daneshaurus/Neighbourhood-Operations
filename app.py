@@ -140,35 +140,38 @@ def filter_median(img):
     return result
 
 
-def konvolusi(img):
-    # TODO: isi logika konvolusi umum di sini (pakai kernel 3x3 misalnya)
-    print("[INFO] konvolusi belum diimplementasikan, mengembalikan citra asli.")
-    return img
+def konvolusi(img, kernel):
+    w, h = img.size
+    pixels = img.load()
 
+    result = Image.new("RGB", (w, h))
+    res_pixels = result.load()
 
-def low_pass_filter(img):
-    # TODO: isi logika low pass filter (blur / smoothing)
-    print("[INFO] low_pass_filter belum diimplementasikan, mengembalikan citra asli.")
-    return img
+    for y in range(h):
+        for x in range(w):
 
+            if x == 0 or y == 0 or x == w-1 or y == h-1:
+                res_pixels[x, y] = pixels[x, y]
+                continue
 
-def high_pass_filter(img):
-    # TODO: isi logika high pass filter (penajaman / edge emphasis)
-    print("[INFO] high_pass_filter belum diimplementasikan, mengembalikan citra asli.")
-    return img
+            sumR, sumG, sumB = 0, 0, 0
 
+            for ky in range(-1, 2):
+                for kx in range(-1, 2):
+                    r, g, b = pixels[x + kx, y + ky]
+                    weight = kernel[ky + 1][kx + 1]
 
-def high_boost_filter(img):
-    # TODO: isi logika high boost filter
-    print("[INFO] high_boost_filter belum diimplementasikan, mengembalikan citra asli.")
-    return img
+                    sumR += r * weight
+                    sumG += g * weight
+                    sumB += b * weight
 
+            r_new = max(0, min(255, int(sumR)))
+            g_new = max(0, min(255, int(sumG)))
+            b_new = max(0, min(255, int(sumB)))
 
-def emboss(img):
-    # TODO: isi logika emboss (relief)
-    print("[INFO] emboss belum diimplementasikan, mengembalikan citra asli.")
-    return img
+            res_pixels[x, y] = (r_new, g_new, b_new)
 
+    return result
 
 def deteksi_tepi(img):
     # TODO: isi logika deteksi tepi (Sobel / Prewitt / Laplacian)
@@ -188,15 +191,10 @@ if __name__ == "__main__":
         print("1. Filter Batas")
         print("2. Filter Mean")
         print("3. Filter Median")
-        print("4. Konvolusi (Umum)")
-        print("5. Low Pass Filter")
-        print("6. High Pass Filter")
-        print("7. High Boost Filter")
-        print("8. Emboss")
-        print("9. Deteksi Tepi")
+        print("4. Konvolusi (Low / High / High-Boost / Emboss)")
 
         try:
-            pilihan = int(input("Pilih operasi (0-9): "))
+            pilihan = int(input("Pilih operasi (0-4): "))
         except ValueError:
             print("Input tidak valid. Masukkan angka saja.")
             continue
@@ -225,40 +223,72 @@ if __name__ == "__main__":
                 open(res, "Filter Median")
 
             case 4:
-                print("\n=== Konvolusi Umum ===")
-                res = konvolusi(img)
-                res.save("images/4_Konvolusi.jpg")
-                open(res, "Konvolusi")
+                print("\n=== Konvolusi ===")
+                print("1. Low Pass Filter")
+                print("2. High Pass Filter")
+                print("3. High Boost Filter")
+                print("4. Emboss")
 
-            case 5:
-                print("\n=== Low Pass Filter ===")
-                res = low_pass_filter(img)
-                res.save("images/5_LowPass.jpg")
-                open(res, "Low Pass Filter")
+                try:
+                    sub = int(input("Pilih jenis konvolusi (1-4): "))
+                except ValueError:
+                    print("Input tidak valid. Masukkan angka saja.")
+                    continue
 
-            case 6:
-                print("\n=== High Pass Filter ===")
-                res = high_pass_filter(img)
-                res.save("images/6_HighPass.jpg")
-                open(res, "High Pass Filter")
+                # default
+                kernel = None
+                nama = ""
+                filename = ""
 
-            case 7:
-                print("\n=== High Boost Filter ===")
-                res = high_boost_filter(img)
-                res.save("images/7_HighBoost.jpg")
-                open(res, "High Boost Filter")
+                if sub == 1:
+                    # Low Pass: blur sederhana 3x3 (dirata-ratakan)
+                    k = [
+                        [1, 1, 1],
+                        [1, 1, 1],
+                        [1, 1, 1]
+                    ]
+                    # normalisasi 1/9
+                    kernel = [[val / 9.0 for val in row] for row in k]
+                    nama = "Low Pass Filter"
+                    filename = "images/4a_LowPass.jpg"
 
-            case 8:
-                print("\n=== Emboss ===")
-                res = emboss(img)
-                res.save("images/8_Emboss.jpg")
-                open(res, "Emboss")
+                elif sub == 2:
+                    # High Pass: penajaman / penekanan tepi
+                    kernel = [
+                        [-1, -1, -1],
+                        [-1,  8, -1],
+                        [-1, -1, -1]
+                    ]
+                    nama = "High Pass Filter"
+                    filename = "images/4b_HighPass.jpg"
 
-            case 9:
-                print("\n=== Deteksi Tepi ===")
-                res = deteksi_tepi(img)
-                res.save("images/9_DeteksiTepi.jpg")
-                open(res, "Deteksi Tepi")
+                elif sub == 3:
+                    # High Boost: A * I - LowPass(I)
+                    # di sini dipakai bentuk kernel langsung (misal A = 1.5)
+                    kernel = [
+                        [0,   -1,    0],
+                        [-1,  5.5,  -1],
+                        [0,   -1,    0]
+                    ]
+                    nama = "High Boost Filter"
+                    filename = "images/4c_HighBoost.jpg"
+
+                elif sub == 4:
+                    # Emboss: efek timbul
+                    kernel = [
+                        [-2, -1, 0],
+                        [-1,  1, 1],
+                        [0,   1, 2]
+                    ]
+                    nama = "Emboss"
+                    filename = "images/4d_Emboss.jpg"
+                else:
+                    print("Pilihan konvolusi tidak valid.")
+                    continue
+
+                res = konvolusi(img, kernel)
+                res.save(filename)
+                open(res, f"Konvolusi - {nama}")
 
             case _:
                 print("Pilihan tidak valid. Coba lagi.")
